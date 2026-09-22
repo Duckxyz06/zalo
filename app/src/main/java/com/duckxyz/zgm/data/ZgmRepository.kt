@@ -15,5 +15,6 @@ interface ZgmRepository {
     suspend fun upsertTask(task: GroupTask)
     suspend fun deleteTask(task: GroupTask)
     suspend fun markZaloConversationRead(conversationKey: String)
+    suspend fun clearZaloSignals()
     suspend fun seedIfEmpty(groups: List<ZaloGroup>, tasks: List<GroupTask>)
 }
