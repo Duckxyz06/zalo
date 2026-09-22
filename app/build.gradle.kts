@@ -13,9 +13,29 @@ android {
         applicationId = "com.duckxyz.zgm"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions += "distribution"
+
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("String", "DISTRIBUTION_CHANNEL", "\"play\"")
+            buildConfigField("boolean", "ENABLE_ACCESSIBILITY_AUTOMATION", "false")
+            resValue("string", "app_name", "ZGM")
+        }
+
+        create("internal") {
+            dimension = "distribution"
+            applicationIdSuffix = ".internal"
+            versionNameSuffix = "-internal"
+            buildConfigField("String", "DISTRIBUTION_CHANNEL", "\"internal\"")
+            buildConfigField("boolean", "ENABLE_ACCESSIBILITY_AUTOMATION", "true")
+            resValue("string", "app_name", "ZGM Internal")
+        }
     }
 
     compileOptions {
@@ -25,6 +45,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
