@@ -417,6 +417,10 @@ private fun ZaloCompanionScreen(
             }
         }
 
+        item {
+            ZaloAccessibilityPanel()
+        }
+
         if (signals.isEmpty()) {
             item {
                 Text(
