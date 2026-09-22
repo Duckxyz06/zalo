@@ -22,6 +22,7 @@ class ZaloNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        if (!ZaloNotificationConsent.isGranted(this)) return
 
         activeNotifications
             .orEmpty()
@@ -35,7 +36,11 @@ class ZaloNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        if (sbn.packageName != ZALO_PACKAGE_NAME) return
+        if (!shouldProcessZaloNotification(
+                consentGranted = ZaloNotificationConsent.isGranted(this),
+                packageName = sbn.packageName
+            )
+        ) return
         processNotification(sbn, snapshotOnly = false)
     }
 
@@ -44,7 +49,11 @@ class ZaloNotificationListenerService : NotificationListenerService() {
         rankingMap: RankingMap,
         reason: Int
     ) {
-        if (sbn.packageName != ZALO_PACKAGE_NAME) return
+        if (!shouldProcessZaloNotification(
+                consentGranted = ZaloNotificationConsent.isGranted(this),
+                packageName = sbn.packageName
+            )
+        ) return
 
         serviceScope.launch {
             if (reason == REASON_CLICK) {
