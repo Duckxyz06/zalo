@@ -128,7 +128,7 @@ fun ZaloNotificationAccessPanel() {
             },
             text = {
                 Text(
-                    "ZGM sẽ truy cập các dữ liệu mà Zalo hiển thị trong notification: " +
+                    "ZGM sẽ truy cập các dữ liệu mà Zalo hiển thị trong notification, kể cả khi ZGM không mở: " +
                         "tên cuộc trò chuyện, nội dung xem trước, thời điểm nhận và trạng thái notification. " +
                         "ZGM dùng các dữ liệu này để tạo danh sách tín hiệu mới, ước lượng mục chưa đọc " +
                         "và mở lại Zalo khi bạn yêu cầu. Dữ liệu hiện chỉ được lưu cục bộ trên thiết bị, " +
