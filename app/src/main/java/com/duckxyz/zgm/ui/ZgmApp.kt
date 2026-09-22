@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.duckxyz.zgm.data.ZgmRepository
 import com.duckxyz.zgm.domain.GroupQuery
 import com.duckxyz.zgm.domain.filterAndSortGroups
+import com.duckxyz.zgm.integration.ZaloNotificationConsent
 import com.duckxyz.zgm.integration.ZaloNotificationOpenRegistry
 import com.duckxyz.zgm.integration.normalizeConversationKey
 import com.duckxyz.zgm.model.GroupTask
@@ -128,6 +129,11 @@ fun ZgmApp(repository: ZgmRepository) {
                                     repository.markZaloConversationRead(
                                         conversationKey
                                     )
+                                }
+                            },
+                            onClearSignals = {
+                                scope.launch {
+                                    repository.clearZaloSignals()
                                 }
                             }
                         )
@@ -350,9 +356,13 @@ private fun TasksScreen(
 private fun ZaloCompanionScreen(
     signals: List<ZaloConversationSignal>,
     groups: List<ZaloGroup>,
-    onMarkRead: (String) -> Unit
+    onMarkRead: (String) -> Unit,
+    onClearSignals: () -> Unit
 ) {
     val context = LocalContext.current
+    var consentGranted by remember {
+        mutableStateOf(ZaloNotificationConsent.isGranted(context))
+    }
     var accessEnabled by remember {
         mutableStateOf(hasNotificationAccess(context))
     }
@@ -361,67 +371,146 @@ private fun ZaloCompanionScreen(
         item {
             Header(
                 "Zalo Companion",
-                "Phát hiện chat từ notification Zalo"
+                "Phát hiện chat từ thông báo Zalo"
             )
         }
 
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 7.dp),
-                colors = CardDefaults.cardColors(containerColor = Panel),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Column(Modifier.padding(18.dp)) {
-                    Text(
-                        if (accessEnabled) {
-                            "Notification Access: Đã bật"
-                        } else {
-                            "Notification Access: Chưa bật"
-                        },
-                        color = if (accessEnabled) Cyan else Color.White,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "ZGM chỉ thấy nội dung mà Zalo đưa vào notification. " +
-                            "Đây không phải quyền đọc database hoặc toàn bộ lịch sử chat.",
-                        color = TextMuted
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                context.startActivity(
-                                    Intent(
-                                        Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
-                                    )
-                                )
-                            }
+        if (!consentGranted) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 7.dp),
+                    colors = CardDefaults.cardColors(containerColor = Panel),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Column(Modifier.padding(18.dp)) {
+                        Text(
+                            "Thông tin quyền truy cập thông báo",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            "ZGM truy cập thông báo của Zalo để đọc tên cuộc trò chuyện " +
+                                "và nội dung xem trước khi có thông báo mới, kể cả khi ZGM " +
+                                "không mở. Dữ liệu này được lưu cục bộ trên thiết bị để " +
+                                "hiển thị chat đã phát hiện và ước lượng tín hiệu chưa đọc.",
+                            color = TextMuted
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "ZGM không truyền, bán hoặc chia sẻ nội dung thông báo. " +
+                                "Bản Play không sử dụng Accessibility để điều khiển Zalo.",
+                            color = TextMuted
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("Cấp quyền")
+                            Button(
+                                onClick = {
+                                    ZaloNotificationConsent.grant(context)
+                                    consentGranted = true
+                                }
+                            ) {
+                                Text("Đồng ý và tiếp tục")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    context.startActivity(
+                                        Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(
+                                                "https://github.com/Duckxyz06/zalo/blob/main/docs/PRIVACY_POLICY.md"
+                                            )
+                                        )
+                                    )
+                                }
+                            ) {
+                                Text("Quyền riêng tư")
+                            }
                         }
+                    }
+                }
+            }
+        } else {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 7.dp),
+                    colors = CardDefaults.cardColors(containerColor = Panel),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Column(Modifier.padding(18.dp)) {
+                        Text(
+                            if (accessEnabled) {
+                                "Notification Access: Đã bật"
+                            } else {
+                                "Notification Access: Chưa bật"
+                            },
+                            color = if (accessEnabled) Cyan else Color.White,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Chỉ sau khi bạn đã đồng ý, ZGM mới xử lý thông báo từ Zalo. " +
+                                "Dữ liệu chỉ được lưu trên thiết bị.",
+                            color = TextMuted
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    context.startActivity(
+                                        Intent(
+                                            Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
+                                        )
+                                    )
+                                }
+                            ) {
+                                Text("Mở cài đặt quyền")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    accessEnabled = hasNotificationAccess(context)
+                                }
+                            ) {
+                                Text("Kiểm tra lại")
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
                         OutlinedButton(
                             onClick = {
-                                accessEnabled =
-                                    hasNotificationAccess(context)
+                                ZaloNotificationConsent.revoke(context)
+                                ZaloNotificationOpenRegistry.clear()
+                                onClearSignals()
+                                consentGranted = false
                             }
                         ) {
-                            Text("Kiểm tra lại")
+                            Text("Thu hồi đồng ý và xóa dữ liệu Zalo")
                         }
                     }
                 }
             }
         }
 
-        if (signals.isEmpty()) {
+        if (!consentGranted) {
             item {
                 Text(
-                    "Chưa phát hiện cuộc trò chuyện nào. " +
-                        "Sau khi bật quyền, chat có notification mới sẽ xuất hiện ở đây.",
+                    "ZGM chưa xử lý thông báo Zalo vì bạn chưa đồng ý.",
+                    color = TextMuted,
+                    modifier = Modifier.padding(20.dp)
+                )
+            }
+        } else if (signals.isEmpty()) {
+            item {
+                Text(
+                    "Chưa phát hiện cuộc trò chuyện nào. Sau khi bật quyền, " +
+                        "chat có notification mới sẽ xuất hiện ở đây.",
                     color = TextMuted,
                     modifier = Modifier.padding(20.dp)
                 )
