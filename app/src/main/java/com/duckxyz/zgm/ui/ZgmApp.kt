@@ -1,9 +1,7 @@
 package com.duckxyz.zgm.ui
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -128,6 +126,11 @@ fun ZgmApp(repository: ZgmRepository) {
                                     repository.markZaloConversationRead(
                                         conversationKey
                                     )
+                                }
+                            },
+                            onClearSignals = {
+                                scope.launch {
+                                    repository.clearZaloSignals()
                                 }
                             }
                         )
@@ -350,78 +353,32 @@ private fun TasksScreen(
 private fun ZaloCompanionScreen(
     signals: List<ZaloConversationSignal>,
     groups: List<ZaloGroup>,
-    onMarkRead: (String) -> Unit
+    onMarkRead: (String) -> Unit,
+    onClearSignals: () -> Unit
 ) {
-    val context = LocalContext.current
-    var accessEnabled by remember {
-        mutableStateOf(hasNotificationAccess(context))
-    }
-
     LazyColumn(Modifier.fillMaxSize()) {
         item {
             Header(
                 "Zalo Companion",
-                "Phát hiện chat từ notification Zalo"
+                "Theo dõi tín hiệu Zalo với quyền rõ ràng"
             )
         }
 
         item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 7.dp),
-                colors = CardDefaults.cardColors(containerColor = Panel),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Column(Modifier.padding(18.dp)) {
-                    Text(
-                        if (accessEnabled) {
-                            "Notification Access: Đã bật"
-                        } else {
-                            "Notification Access: Chưa bật"
-                        },
-                        color = if (accessEnabled) Cyan else Color.White,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "ZGM chỉ thấy nội dung mà Zalo đưa vào notification. " +
-                            "Đây không phải quyền đọc database hoặc toàn bộ lịch sử chat.",
-                        color = TextMuted
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                context.startActivity(
-                                    Intent(
-                                        Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
-                                    )
-                                )
-                            }
-                        ) {
-                            Text("Cấp quyền")
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                accessEnabled =
-                                    hasNotificationAccess(context)
-                            }
-                        ) {
-                            Text("Kiểm tra lại")
-                        }
-                    }
-                }
-            }
+            ZaloNotificationAccessPanel()
+        }
+
+        item {
+            ZaloPrivacyPanel(
+                onClearLocalData = onClearSignals
+            )
         }
 
         if (signals.isEmpty()) {
             item {
                 Text(
-                    "Chưa phát hiện cuộc trò chuyện nào. " +
-                        "Sau khi bật quyền, chat có notification mới sẽ xuất hiện ở đây.",
+                    "Chưa có dữ liệu Zalo được lưu. Sau khi bạn đọc và đồng ý " +
+                        "phần công bố quyền, các notification Zalo mới có thể xuất hiện ở đây.",
                     color = TextMuted,
                     modifier = Modifier.padding(20.dp)
                 )
@@ -435,6 +392,7 @@ private fun ZaloCompanionScreen(
                     normalizeConversationKey(it.name) ==
                         signal.conversationKey
                 }
+                val context = LocalContext.current
 
                 ZaloSignalCard(
                     signal = signal,
@@ -509,13 +467,4 @@ private fun ZaloSignalCard(
             }
         }
     }
-}
-
-private fun hasNotificationAccess(context: Context): Boolean {
-    val enabled = Settings.Secure.getString(
-        context.contentResolver,
-        "enabled_notification_listeners"
-    ).orEmpty()
-
-    return enabled.contains(context.packageName)
 }
