@@ -48,6 +48,10 @@ class RoomZgmRepository(
         database.zaloSignalDao().markRead(conversationKey)
     }
 
+    override suspend fun clearZaloSignals() {
+        database.zaloSignalDao().deleteAll()
+    }
+
     override suspend fun seedIfEmpty(
         groups: List<ZaloGroup>,
         tasks: List<GroupTask>
