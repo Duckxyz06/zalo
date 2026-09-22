@@ -78,4 +78,7 @@ interface ZaloSignalDao {
             "WHERE notificationKey = :notificationKey"
     )
     suspend fun markInactive(notificationKey: String)
+
+    @Query("DELETE FROM zalo_conversation_signals")
+    suspend fun deleteAll()
 }
