@@ -4,6 +4,7 @@ import com.duckxyz.zgm.data.local.ZgmDatabase
 import com.duckxyz.zgm.data.local.toDomain
 import com.duckxyz.zgm.data.local.toEntity
 import com.duckxyz.zgm.model.GroupTask
+import com.duckxyz.zgm.model.ZaloConversationSignal
 import com.duckxyz.zgm.model.ZaloGroup
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -22,6 +23,11 @@ class RoomZgmRepository(
             entities.map { it.toDomain() }
         }
 
+    override val zaloSignals: Flow<List<ZaloConversationSignal>> =
+        database.zaloSignalDao().observeAll().map { entities ->
+            entities.map { it.toDomain() }
+        }
+
     override suspend fun upsertGroup(group: ZaloGroup) {
         database.groupDao().upsert(group.toEntity())
     }
@@ -36,6 +42,10 @@ class RoomZgmRepository(
 
     override suspend fun deleteTask(task: GroupTask) {
         database.taskDao().delete(task.toEntity())
+    }
+
+    override suspend fun markZaloConversationRead(conversationKey: String) {
+        database.zaloSignalDao().markRead(conversationKey)
     }
 
     override suspend fun seedIfEmpty(

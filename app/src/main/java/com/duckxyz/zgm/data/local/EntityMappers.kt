@@ -2,6 +2,7 @@ package com.duckxyz.zgm.data.local
 
 import com.duckxyz.zgm.model.GroupStatus
 import com.duckxyz.zgm.model.GroupTask
+import com.duckxyz.zgm.model.ZaloConversationSignal
 import com.duckxyz.zgm.model.ZaloGroup
 
 private const val TAG_SEPARATOR = "\u001F"
@@ -46,4 +47,24 @@ fun GroupTaskEntity.toDomain() = GroupTask(
     title = title,
     dueLabel = dueLabel,
     completed = completed
+)
+
+fun ZaloConversationSignal.toEntity() = ZaloConversationSignalEntity(
+    conversationKey = conversationKey,
+    conversationTitle = conversationTitle,
+    lastMessage = lastMessage,
+    lastPostedAt = lastPostedAt,
+    unreadEstimate = unreadEstimate,
+    notificationKey = notificationKey,
+    notificationActive = notificationActive
+)
+
+fun ZaloConversationSignalEntity.toDomain() = ZaloConversationSignal(
+    conversationKey = conversationKey,
+    conversationTitle = conversationTitle,
+    lastMessage = lastMessage,
+    lastPostedAt = lastPostedAt,
+    unreadEstimate = unreadEstimate,
+    notificationKey = notificationKey,
+    notificationActive = notificationActive
 )

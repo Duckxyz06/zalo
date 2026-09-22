@@ -2,6 +2,7 @@ package com.duckxyz.zgm.data.local
 
 import com.duckxyz.zgm.model.GroupStatus
 import com.duckxyz.zgm.model.GroupTask
+import com.duckxyz.zgm.model.ZaloConversationSignal
 import com.duckxyz.zgm.model.ZaloGroup
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -37,7 +38,10 @@ class EntityMappersTest {
             zaloUrl = null
         )
 
-        assertEquals(GroupStatus.WATCHING, entity.toDomain().status)
+        assertEquals(
+            GroupStatus.WATCHING,
+            entity.toDomain().status
+        )
     }
 
     @Test
@@ -48,6 +52,21 @@ class EntityMappersTest {
             title = "Chốt danh sách",
             dueLabel = "Ngày mai",
             completed = true
+        )
+
+        assertEquals(original, original.toEntity().toDomain())
+    }
+
+    @Test
+    fun zaloSignalRoundTripPreservesNotificationState() {
+        val original = ZaloConversationSignal(
+            conversationKey = "clb",
+            conversationTitle = "CLB",
+            lastMessage = "Tin nhắn mới",
+            lastPostedAt = 42L,
+            unreadEstimate = 3,
+            notificationKey = "notification-key",
+            notificationActive = true
         )
 
         assertEquals(original, original.toEntity().toDomain())
