@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -31,21 +32,24 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.duckxyz.zgm.data.sampleGroups
-import com.duckxyz.zgm.data.sampleTasks
+import com.duckxyz.zgm.data.ZgmRepository
 import com.duckxyz.zgm.domain.GroupQuery
 import com.duckxyz.zgm.domain.filterAndSortGroups
+import com.duckxyz.zgm.model.GroupTask
 import com.duckxyz.zgm.model.ZaloGroup
+import kotlinx.coroutines.launch
 
 private val Midnight = Color(0xFF071019)
 private val Panel = Color(0xFF0D1D2A)
@@ -53,7 +57,11 @@ private val Cyan = Color(0xFF51E6F5)
 private val TextMuted = Color(0xFF9BB0C0)
 
 @Composable
-fun ZgmApp() {
+fun ZgmApp(repository: ZgmRepository) {
+    val groups by repository.groups.collectAsState(initial = emptyList())
+    val tasks by repository.tasks.collectAsState(initial = emptyList())
+    val scope = rememberCoroutineScope()
+
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = Midnight) {
             var tab by remember { mutableIntStateOf(0) }
@@ -61,17 +69,40 @@ fun ZgmApp() {
                 containerColor = Midnight,
                 bottomBar = {
                     NavigationBar(containerColor = Panel) {
-                        NavigationBarItem(selected = tab == 0, onClick = { tab = 0 }, icon = { Icon(Icons.Default.Home, null) }, label = { Text("Tổng quan") })
-                        NavigationBarItem(selected = tab == 1, onClick = { tab = 1 }, icon = { Icon(Icons.Default.Label, null) }, label = { Text("Nhóm") })
-                        NavigationBarItem(selected = tab == 2, onClick = { tab = 2 }, icon = { Icon(Icons.Default.CheckCircle, null) }, label = { Text("Công việc") })
+                        NavigationBarItem(
+                            selected = tab == 0,
+                            onClick = { tab = 0 },
+                            icon = { Icon(Icons.Default.Home, null) },
+                            label = { Text("Tổng quan") }
+                        )
+                        NavigationBarItem(
+                            selected = tab == 1,
+                            onClick = { tab = 1 },
+                            icon = { Icon(Icons.Default.Label, null) },
+                            label = { Text("Nhóm") }
+                        )
+                        NavigationBarItem(
+                            selected = tab == 2,
+                            onClick = { tab = 2 },
+                            icon = { Icon(Icons.Default.CheckCircle, null) },
+                            label = { Text("Công việc") }
+                        )
                     }
                 }
             ) { padding ->
                 Box(Modifier.padding(padding)) {
                     when (tab) {
-                        0 -> DashboardScreen()
-                        1 -> GroupsScreen()
-                        else -> TasksScreen()
+                        0 -> DashboardScreen(groups, tasks)
+                        1 -> GroupsScreen(groups)
+                        else -> TasksScreen(
+                            tasks = tasks,
+                            groups = groups,
+                            onToggle = { task, checked ->
+                                scope.launch {
+                                    repository.upsertTask(task.copy(completed = checked))
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -82,15 +113,21 @@ fun ZgmApp() {
 @Composable
 private fun Header(title: String, subtitle: String) {
     Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
-        Text(title, color = Color.White, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(
+            title,
+            color = Color.White,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(Modifier.height(4.dp))
         Text(subtitle, color = TextMuted)
     }
 }
 
 @Composable
-private fun DashboardScreen() {
-    val pinned = sampleGroups.filter { it.pinnedRank != null }.sortedBy { it.pinnedRank }
+private fun DashboardScreen(groups: List<ZaloGroup>, tasks: List<GroupTask>) {
+    val pinned = groups.filter { it.pinnedRank != null }.sortedBy { it.pinnedRank }
+
     LazyColumn(Modifier.fillMaxSize()) {
         item { Header("ZGM", "Nhóm gọn. Việc rõ.") }
         item {
@@ -98,30 +135,47 @@ private fun DashboardScreen() {
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Metric("Nhóm", sampleGroups.size.toString(), Modifier.weight(1f))
+                Metric("Nhóm", groups.size.toString(), Modifier.weight(1f))
                 Metric("Đã ghim", pinned.size.toString(), Modifier.weight(1f))
-                Metric("Việc mở", sampleTasks.count { !it.completed }.toString(), Modifier.weight(1f))
+                Metric("Việc mở", tasks.count { !it.completed }.toString(), Modifier.weight(1f))
             }
         }
-        item { Text("Ưu tiên hôm nay", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(20.dp)) }
+        item {
+            Text(
+                "Ưu tiên hôm nay",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(20.dp)
+            )
+        }
         items(pinned) { GroupCard(it) }
     }
 }
 
 @Composable
 private fun Metric(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = Panel),
+        shape = RoundedCornerShape(20.dp)
+    ) {
         Column(Modifier.padding(16.dp)) {
-            Text(value, color = Cyan, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                value,
+                color = Cyan,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
             Text(label, color = TextMuted)
         }
     }
 }
 
 @Composable
-private fun GroupsScreen() {
+private fun GroupsScreen(groups: List<ZaloGroup>) {
     var keyword by remember { mutableStateOf("") }
-    val groups = filterAndSortGroups(sampleGroups, GroupQuery(keyword = keyword))
+    val filtered = filterAndSortGroups(groups, GroupQuery(keyword = keyword))
+
     Column(Modifier.fillMaxSize()) {
         Header("Nhóm của tôi", "Tìm, lọc và ghim độc lập với Zalo")
         OutlinedTextField(
@@ -132,13 +186,16 @@ private fun GroupsScreen() {
             singleLine = true
         )
         Spacer(Modifier.height(12.dp))
-        LazyColumn { items(groups) { GroupCard(it) } }
+        LazyColumn {
+            items(filtered) { GroupCard(it) }
+        }
     }
 }
 
 @Composable
 private fun GroupCard(group: ZaloGroup) {
     val context = LocalContext.current
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 7.dp),
         colors = CardDefaults.cardColors(containerColor = Panel),
@@ -148,13 +205,20 @@ private fun GroupCard(group: ZaloGroup) {
             Modifier
                 .fillMaxWidth()
                 .clickable(enabled = group.zaloUrl != null) {
-                    group.zaloUrl?.let { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
+                    group.zaloUrl?.let {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it)))
+                    }
                 }
                 .padding(18.dp)
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(group.name, color = Color.White, fontWeight = FontWeight.SemiBold)
-                if (group.pinnedRank != null) Icon(Icons.Default.PushPin, null, tint = Cyan)
+                if (group.pinnedRank != null) {
+                    Icon(Icons.Default.PushPin, null, tint = Cyan)
+                }
             }
             Spacer(Modifier.height(6.dp))
             Text(group.tags.joinToString(" • "), color = Cyan)
@@ -169,21 +233,41 @@ private fun GroupCard(group: ZaloGroup) {
 }
 
 @Composable
-private fun TasksScreen() {
+private fun TasksScreen(
+    tasks: List<GroupTask>,
+    groups: List<ZaloGroup>,
+    onToggle: (GroupTask, Boolean) -> Unit
+) {
     LazyColumn(Modifier.fillMaxSize()) {
-        item { Header("Công việc", "Deadline gắn trực tiếp với từng nhóm") }
-        items(sampleTasks) { task ->
-            val group = sampleGroups.first { it.id == task.groupId }
+        item { Header("Công việc", "Deadline được lưu trực tiếp trên thiết bị") }
+
+        items(tasks, key = { it.id }) { task ->
+            val groupName = groups.firstOrNull { it.id == task.groupId }?.name
+                ?: "Nhóm #${task.groupId}"
+
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 7.dp),
                 colors = CardDefaults.cardColors(containerColor = Panel),
                 shape = RoundedCornerShape(20.dp)
             ) {
-                Column(Modifier.padding(18.dp)) {
-                    Text(task.title, color = Color.White, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(4.dp))
-                    Text(group.name, color = Cyan)
-                    Text("Hạn: ${task.dueLabel}", color = TextMuted)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Checkbox(
+                        checked = task.completed,
+                        onCheckedChange = { checked -> onToggle(task, checked) }
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            task.title,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(groupName, color = Cyan)
+                        Text("Hạn: ${task.dueLabel}", color = TextMuted)
+                    }
                 }
             }
         }
