@@ -3,27 +3,44 @@
 Ứng dụng Android quản lý nhóm Zalo cá nhân theo hướng **offline-first**, hoạt động như một lớp tổ chức bên ngoài Zalo.
 
 ## MVP hiện có
+
 - Kotlin + Jetpack Compose.
-- Giao diện **Midnight Glass**.
+- Room database.
 - Dashboard nhóm / ghim / công việc.
 - Tìm nhóm theo tên hoặc thẻ.
 - Pin nội bộ theo thứ tự riêng.
-- Trạng thái xử lý và mức ưu tiên.
 - Task/deadline gắn với nhóm.
-- Unit tests cho logic lọc và sắp xếp.
-- GitHub Actions build + test Android.
+- Zalo Notification Companion.
+- Disclosure + consent trước khi xử lý notification.
+- Privacy Center để xóa dữ liệu Zalo cục bộ.
+- GitHub Actions build + test.
 
-## Nguyên tắc tích hợp Zalo
-ZGM không chỉnh sửa dữ liệu nội bộ hoặc giao diện Zalo. Khi có link hợp lệ do người dùng lưu, app có thể mở cuộc trò chuyện/nhóm bằng Android intent.
+## Hai kênh phân phối
 
-## Chạy dự án
+### play
+
+Dành cho Google Play. Bản này không chứa Accessibility automation. CI có manifest guard để chặn AccessibilityService lọt vào `playRelease`.
+
+### internal
+
+Dành cho QA/thử nghiệm. Application ID có hậu tố `.internal`. Các thử nghiệm Accessibility chỉ được phép đưa vào source set Internal.
+
+## Build
+
 Yêu cầu Android Studio mới, JDK 17, Android SDK 35.
 
 ```bash
-gradle testDebugUnitTest
-gradle assembleDebug
+gradle testPlayDebugUnitTest testInternalDebugUnitTest
+gradle assemblePlayDebug assembleInternalDebug
+gradle bundlePlayRelease
+sh scripts/check_play_manifest.sh
 ```
 
-Chi tiết dự án: `docs/Zalo_Group_Manager_Project.md`
+## Tài liệu
 
-Prompt thiết kế UI: `docs/UI_IMAGE_PROMPTS.md`
+- `docs/Zalo_Group_Manager_Project.md`
+- `docs/ZALO_COMPANION.md`
+- `docs/PLAY_DISTRIBUTION.md`
+- `docs/PRIVACY_POLICY_DRAFT.md`
+- `docs/DATA_SAFETY_DRAFT.md`
+- `docs/PLAY_RELEASE_CHECKLIST.md`
