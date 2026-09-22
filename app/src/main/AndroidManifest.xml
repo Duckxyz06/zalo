@@ -6,6 +6,7 @@
 
     <application
         android:allowBackup="false"
+        android:usesCleartextTraffic="false"
         android:label="ZGM"
         android:supportsRtl="true"
         android:theme="@style/Theme.ZGM">
