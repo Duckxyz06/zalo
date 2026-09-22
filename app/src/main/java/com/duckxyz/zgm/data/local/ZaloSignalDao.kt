@@ -31,7 +31,8 @@ interface ZaloSignalDao {
         val existing = getByConversationKey(signal.conversationKey)
 
         val isDuplicateUpdate =
-            existing?.notificationKey == signal.notificationKey &&
+            existing != null &&
+                existing.notificationKey == signal.notificationKey &&
                 existing.lastMessage == signal.lastMessage
 
         upsert(
