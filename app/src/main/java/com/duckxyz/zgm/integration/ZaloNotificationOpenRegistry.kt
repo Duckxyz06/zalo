@@ -18,6 +18,10 @@ object ZaloNotificationOpenRegistry {
         }
     }
 
+    fun clear() {
+        conversationIntents.clear()
+    }
+
     fun openConversationOrZalo(
         context: Context,
         conversationKey: String
