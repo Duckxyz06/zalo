@@ -5,6 +5,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.duckxyz.zgm.data.local.ZgmDatabase
 import com.duckxyz.zgm.data.local.toEntity
+import com.duckxyz.zgm.privacy.ZaloNotificationConsent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,6 +23,7 @@ class ZaloNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
+        if (!ZaloNotificationConsent.hasConsent(this)) return
 
         activeNotifications
             .orEmpty()
@@ -35,6 +37,7 @@ class ZaloNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        if (!ZaloNotificationConsent.hasConsent(this)) return
         if (sbn.packageName != ZALO_PACKAGE_NAME) return
         processNotification(sbn, snapshotOnly = false)
     }
@@ -44,6 +47,7 @@ class ZaloNotificationListenerService : NotificationListenerService() {
         rankingMap: RankingMap,
         reason: Int
     ) {
+        if (!ZaloNotificationConsent.hasConsent(this)) return
         if (sbn.packageName != ZALO_PACKAGE_NAME) return
 
         serviceScope.launch {
